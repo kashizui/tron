@@ -17,7 +17,6 @@ import os
 
 import yaml
 from docopt import docopt
-from trello import TrelloClient
 import getpass
 import requests
 
