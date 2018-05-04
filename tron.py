@@ -48,7 +48,7 @@ def move_cards(source_list, target_list):
     }).json()
 
     for card in cards:
-        print('Moving "{}" from "{}" to ""'.format(
+        print('Moving "{}" from "{}" to "{}"'.format(
             card['name'], source_list['name'], target_list['name']))
         r = requests.put('https://api.trello.com/1/cards/{id}'.format(id=card['id']), params={
             'token': config['token'],
