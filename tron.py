@@ -60,7 +60,6 @@ def move_cards(source_list, target_list):
 
 def main(args):
     global config
-    print(args)
 
     with open(args['--config'], 'r') as config_file:
         config = yaml.load(config_file)
