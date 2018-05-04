@@ -1,14 +1,15 @@
 '''Tron: Trello Recurring Card Scheduler
 
 Usage:
-  tron.py daily
-  tron.py weekly
+  tron.py [--config=<file>] daily
+  tron.py [--config=<file>] weekly
   tron.py (-h | --help)
   tron.py --version
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
+  -h --help         Show this screen.
+  --version         Show version.
+  --config=<file>   Config file [default: config.yml].
 
 '''
 from __future__ import print_function
@@ -61,7 +62,7 @@ def main(args):
     global config
     print(args)
 
-    with open('config.yml', 'r') as config_file:
+    with open(args['--config'], 'r') as config_file:
         config = yaml.load(config_file)
 
     if 'token' not in config:
