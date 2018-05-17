@@ -99,7 +99,7 @@ class Tron(object):
         cards = self.trello('get', '/lists/{id}/cards'.format(id=list_id)).json()
         cards = [c for c in cards if c['due'] is not None]
         message = []
-        message.append("*THE FINAL COUNTDOWN*")
+        message.append("*DAILY COUNTDOWN*")
         for card in cards:
             due = dateutil.parser.parse(card['due'])
             if due > now:
