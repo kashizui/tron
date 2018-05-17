@@ -111,7 +111,7 @@ class Tron(object):
             print('\n'.join(message))
         else:
             self.send_slack('\n'.join(message), slack_channel,
-                    botname='countdown-bot', icon=':hourglass_flowing_sand:')
+                    botname='countdownbot', icon=':hourglass_flowing_sand:')
 
     def send_email(self, to, subject, message):
         if 'sendgrid' in self.config:
