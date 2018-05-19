@@ -18,12 +18,9 @@ import os
 
 from docopt import docopt
 from sendgrid.helpers.mail import *
-import arrow
 import datetime
-import dateutil.parser
-import dateutil.relativedelta
-import dateutil.tz
 import getpass
+import pendulum
 import requests
 import sendgrid
 import yaml
@@ -95,15 +92,20 @@ class Tron(object):
                 r.raise_for_status()
 
     def countdown(self, list_id, slack_channel):
-        now = datetime.datetime.now(dateutil.tz.tzutc())
         cards = self.trello('get', '/lists/{id}/cards'.format(id=list_id)).json()
         cards = [c for c in cards if c['due'] is not None]
         message = []
         message.append("*DAILY COUNTDOWN*")
+        now = pendulum.now()
+        cards_to_display = []
         for card in cards:
-            due = dateutil.parser.parse(card['due'])
-            if due > now:
-                message.append(":black_small_square: {} is {}.".format(card['name'], arrow.get(due).humanize()))
+            due = pendulum.parse(card['due'])
+            if not card['dueComplete'] and due > now:
+                cards_to_display.append((due, card['name']))
+        cards_to_display.sort(reverse=True)
+        for due, item_name in cards_to_display:
+            message.append(":black_small_square: {} is in {}.".format(
+                item_name, now.diff_for_humans(due, absolute=True)))
         message.append('_You can add your own countdown by creating a '
                       'card with a due date in Two Boo Doos._')
         if self.dry_run:
