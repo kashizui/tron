@@ -21,12 +21,13 @@ from sendgrid.helpers.mail import *
 import datetime
 import getpass
 import pendulum
+import re
 import requests
 import sendgrid
 import yaml
 
 
-def pretty_print(obj):
+def pprint(obj):
     print(json.dumps(
         obj, sort_keys=True, indent=4, separators=(',', ': ')))
 
@@ -42,6 +43,7 @@ class Tron(object):
     def __init__(self, config, dry_run):
         self.config = config
         self.dry_run = dry_run
+        self.now = pendulum.now()
 
     def trello(self, method, endpoint, params=None):
         """Thin wrapper for Trello API calls."""
@@ -83,29 +85,25 @@ class Tron(object):
             print('Moving "{}" from "{}" to "{}"'.format(
                 card['name'], source_list['name'], target_list['name']))
             if not self.dry_run:
-                r = requests.put('https://api.trello.com/1/cards/{id}'.format(id=card['id']), params={
-                    'token': self.config['token'],
-                    'key': self.config['api_key'],
+                self.trello('put', '/cards/{id}'.format(id=card['id']), params={
                     'idList': target_list['id'],
                     'position': 'top',
                 })
-                r.raise_for_status()
 
     def countdown(self, list_id, slack_channel):
         cards = self.trello('get', '/lists/{id}/cards'.format(id=list_id)).json()
         cards = [c for c in cards if c['due'] is not None]
         message = []
         message.append("*DAILY COUNTDOWN*")
-        now = pendulum.now()
         cards_to_display = []
         for card in cards:
             due = pendulum.parse(card['due'])
-            if not card['dueComplete'] and due > now:
+            if not card['dueComplete'] and due > self.now:
                 cards_to_display.append((due, card['name']))
         cards_to_display.sort(reverse=True)
         for due, item_name in cards_to_display:
             message.append(":black_small_square: {} is in {}.".format(
-                item_name, now.diff_for_humans(due, absolute=True)))
+                item_name, self.now.diff_for_humans(due, absolute=True)))
         message.append('_You can add your own countdown by creating a '
                       'card with a due date in Two Boo Doos._')
         if self.dry_run:
@@ -114,6 +112,56 @@ class Tron(object):
         else:
             self.send_slack('\n'.join(message), slack_channel,
                     botname='countdownbot', icon=':hourglass_flowing_sand:')
+
+    def refresh_repeating(self, list_id, slack_channel):
+        # TODO: leave comment if error
+        cards = self.trello('get', '/lists/{id}/cards'.format(id=list_id), params={
+                # 'actions': 'updateCard',
+                # 'action_since': self.now.subtract(days=2).isoformat(),
+            }).json()
+        to_update = []
+        to_notify = []
+        for card in cards:
+            # Parse interval specification
+            interval_spec = re.search('^!repeat (?:every )?(.*)$', card['desc']).group(1)
+            interval_parts = [
+                    piece.split(maxsplit=2)
+                    for piece in interval_spec.split(' and ')
+                ]
+            interval_parsed = {
+                    (unit if unit.endswith('s') else unit + 's'): int(num)
+                    for num, unit in interval_parts
+                }
+            interval = pendulum.duration(**interval_parsed)
+            if card['due'] is None:
+                to_update.append((card, self.now.add(**interval_parsed)))
+            elif card['dueComplete']:
+                # lastCompleted = max(
+                #         pendulum.parse(action['date'])
+                #         for action in card['actions']
+                #         if action['data']['card'].get('dueComplete')
+                #     )
+                # This can also just use now if this script is run daily...
+                to_update.append((card, self.now.add(**interval_parsed)))
+            elif pendulum.parse(card['due']) <= self.now:
+                to_notify.append((card, interval))
+            else:
+                pass
+        for card, new_due in to_update:
+            print('Setting due date of {} to {}'.format(
+                card['name'], new_due.to_date_string()))
+            if not self.dry_run:
+                self.trello('put', '/cards/{id}'.format(id=card['id']), params={
+                    'due': new_due.to_date_string(),
+                    'dueComplete': 'false',
+                })
+        if to_notify:
+            self.send_slack('\n'.join([
+                    'Time to {}! (at least {} has elapsed since last time)'.format(
+                        card['name'].lower(), interval.in_words())
+                    for card, interval in to_notify
+                ]),
+                slack_channel, botname='chorebot', icon=':sparkles:')
 
     def send_email(self, to, subject, message):
         if 'sendgrid' in self.config:
@@ -128,14 +176,17 @@ class Tron(object):
             print(response.headers)
 
     def send_slack(self, message, channel='#chat', botname='tron', icon=':hamster:'):
-        r = requests.post(self.config['slack']['webhook_url'], json={
-            "text": message.format(channel=channel),
-            "channel": channel,
-            "link_names": 1,
-            "username": botname,
-            "icon_emoji": icon,
-        })
-        print(r.text)
+        print('Posting as {} to {}:'.format(botname, channel))
+        print(message)
+        if not self.dry_run:
+            r = requests.post(self.config['slack']['webhook_url'], json={
+                "text": message.format(channel=channel),
+                "channel": channel,
+                "link_names": 1,
+                "username": botname,
+                "icon_emoji": icon,
+            })
+            r.raise_for_status()
 
 
 def main(args):
@@ -143,9 +194,6 @@ def main(args):
         config = yaml.load(config_file)
 
     t = Tron(config, args['--dry-run'])
-
-    # send_slack(config, 'hello {channel}, please share the tofu', channel="@stephen")
-    # exit()
 
     if 'token' not in config:
         print('Please authorize:')
@@ -158,9 +206,13 @@ def main(args):
     whats_next = t.get_board_by_name("what's next")
     boo_board = t.get_board_by_name("boo adventures", organization="booxboo")
     twoboodoos = t.get_list_by_name(boo_board['id'], "two boo doos")
+    chores = t.get_list_by_name(boo_board['id'], "chores")
     today = t.get_list_by_name(whats_next['id'], 'today')
     this_week = t.get_list_by_name(whats_next['id'], 'this week')
     runway = t.get_list_by_name(whats_next['id'], 'runway')
+
+    t.refresh_repeating(chores['id'], '#chores')
+    exit()
 
     if args['daily'] or args['weekly']:
         t.countdown(twoboodoos['id'], '#planning')
