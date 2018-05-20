@@ -125,9 +125,13 @@ class Tron(object):
             # Parse interval specification
             interval_spec = re.search('^!repeat (?:every )?(.*)$', card['desc']).group(1)
             interval_parts = [
-                    piece.split(maxsplit=2)
+                    piece.split(maxsplit=1)
                     for piece in interval_spec.split(' and ')
                 ]
+            # if "every month" then add 1 in front of "month"
+            for split in interval_parts:
+                if len(split) == 1:
+                    split.insert(0, 1)
             interval_parsed = {
                     (unit if unit.endswith('s') else unit + 's'): int(num)
                     for num, unit in interval_parts
