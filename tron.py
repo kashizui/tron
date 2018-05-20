@@ -130,7 +130,7 @@ class Tron(object):
                 ]
             # if "every month" then add 1 in front of "month"
             for split in interval_parts:
-                if len(split) == 1:
+                if len(split) < 2:
                     split.insert(0, 1)
             interval_parsed = {
                     (unit if unit.endswith('s') else unit + 's'): int(num)
@@ -215,11 +215,9 @@ def main(args):
     this_week = t.get_list_by_name(whats_next['id'], 'this week')
     runway = t.get_list_by_name(whats_next['id'], 'runway')
 
-    t.refresh_repeating(chores['id'], '#chores')
-    exit()
-
     if args['daily'] or args['weekly']:
         t.countdown(twoboodoos['id'], '#planning')
+        t.refresh_repeating(chores['id'], '#chores')
         t.move_cards(today, this_week)
 
 
