@@ -125,7 +125,7 @@ class Tron(object):
             # Parse interval specification
             m = re.search('^!repeat (?:every )?(.*)$', card['desc'])
             if m is None:
-                pass
+                continue
             interval_spec = m.group(1)
             interval_parts = [
                     piece.split(maxsplit=1)
