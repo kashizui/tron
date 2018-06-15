@@ -123,7 +123,10 @@ class Tron(object):
         to_notify = []
         for card in cards:
             # Parse interval specification
-            interval_spec = re.search('^!repeat (?:every )?(.*)$', card['desc']).group(1)
+            m = re.search('^!repeat (?:every )?(.*)$', card['desc'])
+            if m is None:
+                pass
+            interval_spec = m.group(1)
             interval_parts = [
                     piece.split(maxsplit=1)
                     for piece in interval_spec.split(' and ')
