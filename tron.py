@@ -122,37 +122,42 @@ class Tron(object):
         to_update = []
         to_notify = []
         for card in cards:
-            # Parse interval specification
-            m = re.search('^!repeat (?:every )?(.*)$', card['desc'])
-            if m is None:
-                continue
-            interval_spec = m.group(1)
-            interval_parts = [
-                    piece.split(maxsplit=1)
-                    for piece in interval_spec.split(' and ')
-                ]
-            # if "every month" then add 1 in front of "month"
-            for split in interval_parts:
-                if len(split) < 2:
-                    split.insert(0, 1)
-            interval_parsed = {
-                    (unit if unit.endswith('s') else unit + 's'): int(num)
-                    for num, unit in interval_parts
-                }
-            interval = pendulum.duration(**interval_parsed)
-            if card['due'] is None:
-                to_update.append((card, self.now.add(**interval_parsed)))
-            elif card['dueComplete']:
-                # lastCompleted = max(
-                #         pendulum.parse(action['date'])
-                #         for action in card['actions']
-                #         if action['data']['card'].get('dueComplete')
-                #     )
-                # This can also just use now if this script is run daily...
-                to_update.append((card, self.now.add(**interval_parsed)))
-            elif pendulum.parse(card['due']) <= self.now:
-                to_notify.append((card, interval))
-            else:
+            # This code is error-prone, so just wrap in a try-catch..
+            try:
+                # Parse interval specification
+                m = re.search('^!repeat (?:every )?(.*)$', card['desc'])
+                if m is None:
+                    continue
+                interval_spec = m.group(1)
+                interval_parts = [
+                        piece.split(maxsplit=1)
+                        for piece in interval_spec.split(' and ')
+                    ]
+                # if "every month" then add 1 in front of "month"
+                for split in interval_parts:
+                    if len(split) < 2:
+                        split.insert(0, 1)
+                interval_parsed = {
+                        (unit if unit.endswith('s') else unit + 's'): int(num)
+                        for num, unit in interval_parts
+                    }
+                interval = pendulum.duration(**interval_parsed)
+                if card['due'] is None:
+                    to_update.append((card, self.now.add(**interval_parsed)))
+                elif card['dueComplete']:
+                    # lastCompleted = max(
+                    #         pendulum.parse(action['date'])
+                    #         for action in card['actions']
+                    #         if action['data']['card'].get('dueComplete')
+                    #     )
+                    # This can also just use now if this script is run daily...
+                    to_update.append((card, self.now.add(**interval_parsed)))
+                elif pendulum.parse(card['due']) <= self.now:
+                    to_notify.append((card, interval))
+                else:
+                    # Do nothing.
+                    pass
+            except:
                 pass
         for card, new_due in to_update:
             print('Setting due date of {} to {}'.format(
