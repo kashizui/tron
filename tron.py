@@ -223,7 +223,7 @@ def main(args):
         chores = t.get_list_by_name(boo_board['id'], "chores")
         today = t.get_list_by_name(whats_next['id'], 'today')
         this_week = t.get_list_by_name(whats_next['id'], 'this week')
-        this_month = t.get_list_by_name(whats_next['id'], 'blah')
+        this_month = t.get_list_by_name(whats_next['id'], 'this month')
 
         if args['daily'] or args['weekly']:
             t.countdown(twoboodoos['id'], '#planning')
