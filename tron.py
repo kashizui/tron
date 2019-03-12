@@ -175,8 +175,10 @@ class Tron(object):
                 ]),
                 slack_channel, botname='chorebot', icon=':sparkles:')
 
-    def send_email(self, to, subject, message):
+    def send_email(self, to=None, subject="", message=""):
         if 'sendgrid' in self.config:
+            # Default recipient is myself (a.k.a. 'reply_to')
+            to = to or self.config['sendgrid']['reply_to']
             sg = sendgrid.SendGridAPIClient(apikey=self.config['sendgrid']['api_key'])
             from_email = Email(self.config['sendgrid']['reply_to'])
             to_email = Email(to)
@@ -207,31 +209,34 @@ def main(args):
 
     t = Tron(config, args['--dry-run'])
 
-    if 'token' not in config:
-        print('Please authorize:')
-        print('https://trello.com/1/authorize?expiration=never'
-              '&name=TronScript&scope=read,write'
-              '&response_type=token&key={api_key}'.format(**config))
-        config['token'] = getpass.getpass('Enter token:')
+    try:
+        if 'token' not in config:
+            print('Please authorize:')
+            print('https://trello.com/1/authorize?expiration=never'
+                  '&name=TronScript&scope=read,write'
+                  '&response_type=token&key={api_key}'.format(**config))
+            config['token'] = getpass.getpass('Enter token:')
 
-    # Fetch boards and lists by name
-    whats_next = t.get_board_by_name("what's next")
-    boo_board = t.get_board_by_name("boo adventures", organization="booxboo")
-    twoboodoos = t.get_list_by_name(boo_board['id'], "two boo doos")
-    chores = t.get_list_by_name(boo_board['id'], "chores")
-    today = t.get_list_by_name(whats_next['id'], 'today')
-    this_week = t.get_list_by_name(whats_next['id'], 'this week')
-    runway = t.get_list_by_name(whats_next['id'], 'runway')
+        # Fetch boards and lists by name
+        whats_next = t.get_board_by_name("what's next")
+        boo_board = t.get_board_by_name("boo adventures", organization="booxboo")
+        twoboodoos = t.get_list_by_name(boo_board['id'], "two boo doos")
+        chores = t.get_list_by_name(boo_board['id'], "chores")
+        today = t.get_list_by_name(whats_next['id'], 'today')
+        this_week = t.get_list_by_name(whats_next['id'], 'this week')
+        this_month = t.get_list_by_name(whats_next['id'], 'blah')
 
-    if args['daily'] or args['weekly']:
-        t.countdown(twoboodoos['id'], '#planning')
-        t.refresh_repeating(chores['id'], '#chores')
-        t.move_cards(today, this_week)
+        if args['daily'] or args['weekly']:
+            t.countdown(twoboodoos['id'], '#planning')
+            t.refresh_repeating(chores['id'], '#chores')
+            t.move_cards(today, this_week)
 
 
-    if args['weekly']:
-        t.move_cards(this_week, runway)
+        if args['weekly']:
+            t.move_cards(this_week, this_month)
 
+    except Exception as e:
+        t.send_email(subject="Tron failed!", message=str(e))
 
 
 if __name__ == '__main__':
