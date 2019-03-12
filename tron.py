@@ -177,8 +177,7 @@ class Tron(object):
 
     def send_email(self, to=None, subject="", message=""):
         if 'sendgrid' in self.config:
-            # Default recipient is myself (a.k.a. 'reply_to')
-            to = to or self.config['sendgrid']['reply_to']
+            to = to or self.config['sendgrid']['default_recipient']
             sg = sendgrid.SendGridAPIClient(apikey=self.config['sendgrid']['api_key'])
             from_email = Email(self.config['sendgrid']['reply_to'])
             to_email = Email(to)
