@@ -227,7 +227,7 @@ def main(args):
 
         if args['daily'] or args['weekly']:
             t.countdown(twoboodoos['id'], '#planning')
-            t.refresh_repeating(chores['id'], '#chores')
+            # t.refresh_repeating(chores['id'], '#chores')
             t.move_cards(today, this_week)
 
 
