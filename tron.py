@@ -220,7 +220,7 @@ def main(args):
         whats_next = t.get_board_by_name("what's next")
         boo_board = t.get_board_by_name("boo adventures", organization="booxboo")
         twoboodoos = t.get_list_by_name(boo_board['id'], "two boo doos")
-        chores = t.get_list_by_name(boo_board['id'], "chores")
+        # chores = t.get_list_by_name(boo_board['id'], "chores")
         today = t.get_list_by_name(whats_next['id'], 'today')
         this_week = t.get_list_by_name(whats_next['id'], 'this week')
         this_month = t.get_list_by_name(whats_next['id'], 'this month')
