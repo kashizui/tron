@@ -223,16 +223,15 @@ def main(args):
         # chores = t.get_list_by_name(boo_board['id'], "chores")
         today = t.get_list_by_name(whats_next['id'], 'today')
         this_week = t.get_list_by_name(whats_next['id'], 'this week')
-        this_month = t.get_list_by_name(whats_next['id'], 'this month')
+        someday = t.get_list_by_name(whats_next['id'], 'someday')
 
-        if args['daily'] or args['weekly']:
+        if args['daily']:
             t.countdown(twoboodoos['id'], '#planning')
             # t.refresh_repeating(chores['id'], '#chores')
             t.move_cards(today, this_week)
 
-
         if args['weekly']:
-            t.move_cards(this_week, this_month)
+            t.move_cards(this_week, someday)
 
     except Exception as e:
         t.send_email(subject="Tron failed!", message=str(e))
