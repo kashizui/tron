@@ -78,9 +78,13 @@ class Tron(object):
         except StopIteration:
             raise KeyError('List with name {} not found'.format(list_name))
 
-
-    def move_cards(self, source_list, target_list):
+    def move_cards(self, source_list, target_list, send_report=False):
         cards = self.trello('get', '/lists/{id}/cards'.format(id=source_list['id'])).json()
+        if send_report:
+            lines = ['You didn\'t finish these cards:']
+            lines.extend([('  * %s' % card['name']) for card in cards])
+            self.send_email(subject="Tron Report", message='\n'.join(lines))
+
         for card in cards:
             print('Moving "{}" from "{}" to "{}"'.format(
                 card['name'], source_list['name'], target_list['name']))
@@ -187,6 +191,8 @@ class Tron(object):
             print(response.status_code)
             print(response.body)
             print(response.headers)
+        else:
+            print('No sendgrid config, failed to send email')
 
     def send_slack(self, message, channel='#chat', botname='tron', icon=':hamster:'):
         print('Posting as {} to {}:'.format(botname, channel))
@@ -231,7 +237,7 @@ def main(args):
             t.move_cards(today, this_week)
 
         if args['weekly']:
-            t.move_cards(this_week, someday)
+            t.move_cards(this_week, someday, send_report=True)
 
     except Exception as e:
         t.send_email(subject="Tron failed!", message=str(e))
